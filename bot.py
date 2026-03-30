@@ -13,7 +13,7 @@ from telegram.ext import (
     CallbackQueryHandler, ConversationHandler, ContextTypes, filters
 )
 from names import extract_names, reflow_paragraphs
-from lookup import lookup_all, search_twitter, search_instagram, twitter_search_url
+from lookup import lookup_all, search_twitter, search_instagram, twitter_search_url, SerperCreditsError
 from formatter import apply_substitutions, format_platform
 
 warnings.filterwarnings("ignore", message="If 'per_message=False'", category=UserWarning)
@@ -134,7 +134,13 @@ async def send_formatted_output(update: Update, context: ContextTypes.DEFAULT_TY
     if config.get("auto_paragraph", False):
         text = reflow_paragraphs(text)
         if config.get("auto_emoji", False):
-            text = await _add_paragraph_emojis(text)
+            try:
+                text = await _add_paragraph_emojis(text)
+            except anthropic.APIStatusError as e:
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=f"Anthropic API error — auto-emoji skipped: {e.message}",
+                )
 
     platform_texts = apply_substitutions(text, substitutions)
 
@@ -459,7 +465,11 @@ async def handle_manual_names_callback(update: Update, context: ContextTypes.DEF
     if data == "man:lookup":
         await query.edit_message_text(f"Looking up {len(names)} name(s)…")
         enabled_platforms = context.user_data.get("enabled_platforms", {"twitter", "bluesky", "instagram"})
-        lookups = await asyncio.gather(*[lookup_all(n, enabled_platforms) for n in names])
+        try:
+            lookups = await asyncio.gather(*[lookup_all(n, enabled_platforms) for n in names])
+        except SerperCreditsError:
+            await query.edit_message_text("Serper API credits are exhausted — handle lookups unavailable.")
+            return ConversationHandler.END
         context.user_data["lookups"] = list(lookups)
         context.user_data["current_name_idx"] = 0
         return await show_next_name(update, context)
@@ -524,7 +534,11 @@ async def handle_select_callback(update: Update, context: ContextTypes.DEFAULT_T
     chosen = [names[i] for i in sorted(selected)]
     await query.edit_message_text(f"Looking up {len(chosen)} name(s)…")
     enabled_platforms = context.user_data.get("enabled_platforms", {"twitter", "bluesky", "instagram"})
-    lookups = await asyncio.gather(*[lookup_all(n, enabled_platforms) for n in chosen])
+    try:
+        lookups = await asyncio.gather(*[lookup_all(n, enabled_platforms) for n in chosen])
+    except SerperCreditsError:
+        await query.edit_message_text("Serper API credits are exhausted — handle lookups unavailable.")
+        return ConversationHandler.END
     context.user_data["lookups"] = list(lookups)
     context.user_data["current_name_idx"] = 0
     return await show_next_name(update, context)

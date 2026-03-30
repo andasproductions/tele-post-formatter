@@ -7,6 +7,10 @@ BLUESKY_API = "https://public.api.bsky.app/xrpc/app.bsky.actor.searchActors"
 SERPER_API = "https://google.serper.dev/search"
 
 
+class SerperCreditsError(Exception):
+    pass
+
+
 async def search_bluesky(name: str, limit: int = 3) -> list[dict]:
     """Search Bluesky globally for actors matching name. Returns list of {handle, display_name}."""
     async with httpx.AsyncClient() as client:
@@ -45,6 +49,9 @@ async def search_serper(query: str) -> str | None:
             results = r.json().get("organic", [])
             if results:
                 return results[0].get("link")
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 402:
+                raise SerperCreditsError("Serper API credits exhausted") from e
         except Exception:
             pass
     return None
@@ -67,6 +74,9 @@ async def search_twitter(name: str) -> str | None:
                 parts = [p for p in urlparse(url).path.strip("/").split("/") if p]
                 if len(parts) == 1 and not parts[0].startswith(("#", "i", "search")):
                     return url
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 402:
+                raise SerperCreditsError("Serper API credits exhausted") from e
         except Exception:
             pass
     return None
@@ -89,6 +99,9 @@ async def search_instagram(name: str) -> str | None:
                 parts = [p for p in urlparse(url).path.strip("/").split("/") if p]
                 if len(parts) == 1 and not parts[0].startswith(("p", "reel", "explore", "stories")):
                     return url
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 402:
+                raise SerperCreditsError("Serper API credits exhausted") from e
         except Exception:
             pass
     return None
