@@ -15,5 +15,6 @@
     "suffix": ""
   },
   "ignored_names": [],
-  "allowed_users": []
+  "allowed_users": [],
+  "auto_paragraph": false
 }

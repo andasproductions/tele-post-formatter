@@ -9,7 +9,7 @@ RUN uv sync --frozen --no-dev
 
 COPY . .
 
-RUN uv run python -m spacy download en_core_web_sm
+RUN uv run python -m spacy download en_core_web_md
 
 # /data is where Railway mounts the persistent volume
 RUN mkdir -p /data

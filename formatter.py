@@ -23,15 +23,20 @@ def _split_text(text: str, limit: int) -> list[str]:
     # Only non-final chunks carry this overhead.
     result = []
     remaining = text
+    prev_ended_at_sentence = False
     for i in range(1, total + 1):
         is_last = (i == total)
+        prefix = "…" if (i > 1 and not prev_ended_at_sentence) else ""
         if is_last:
-            result.append(remaining.strip())
+            result.append((prefix + remaining.strip()) if prefix else remaining.strip())
             break
-        overhead = len(f"…\n\n{i}/{total}")
+        overhead = len(f"…\n\n{i}/{total}") + len(prefix)
         available = limit - overhead
         chunk, remaining = _take_chunk(remaining.strip(), available)
-        result.append(chunk.strip() + f"…\n\n{i}/{total}")
+        chunk_stripped = chunk.strip()
+        ellipsis = "" if chunk_stripped and chunk_stripped[-1] in ".!?" else "…"
+        prev_ended_at_sentence = (ellipsis == "")
+        result.append(prefix + chunk_stripped + ellipsis + f"\n\n{i}/{total}")
 
     return result
 
@@ -40,12 +45,18 @@ def _greedy_split(text: str, limit: int) -> list[str]:
     """Split greedily without numbering to estimate chunk count."""
     chunks = []
     remaining = text.strip()
+    prev_ended_at_sentence = False
     while remaining:
-        if len(remaining) <= limit:
+        is_first = len(chunks) == 0
+        leading = 0 if (is_first or prev_ended_at_sentence) else 1  # leading ellipsis on chunks 2+
+        if len(remaining) + leading <= limit:
             chunks.append(remaining)
             break
-        chunk, remaining = _take_chunk(remaining, limit - 1)  # -1 for ellipsis
-        chunks.append(chunk.strip() + "…")
+        chunk, remaining = _take_chunk(remaining, limit - 1 - leading)  # -1 for trailing ellipsis
+        chunk_stripped = chunk.strip()
+        ellipsis = "" if chunk_stripped and chunk_stripped[-1] in ".!?" else "…"
+        prev_ended_at_sentence = (ellipsis == "")
+        chunks.append(chunk_stripped + ellipsis)
         remaining = remaining.strip()
     return chunks
 
@@ -59,17 +70,22 @@ def _take_chunk(text: str, max_chars: int) -> tuple[str, str]:
     if len(text) <= max_chars:
         return text, ""
 
-    # Try to break at sentence boundary within the window
     window = text[:max_chars]
+
+    # Prefer paragraph break
+    idx = window.rfind("\n\n")
+    if idx > max_chars // 2:
+        return text[:idx], text[idx + 2:]
+
+    # Try to break at sentence boundary
     for punct in (".", "!", "?"):
         idx = window.rfind(punct)
-        if idx > max_chars // 2:  # only if it's reasonably far in
+        if idx > max_chars // 2:
             return text[:idx + 1], text[idx + 1:]
 
     # Fall back to word boundary
     idx = window.rfind(" ")
     if idx == -1:
-        # No space found — hard break
         return text[:max_chars], text[max_chars:]
     return text[:idx], text[idx + 1:]
 
@@ -81,7 +97,7 @@ def apply_config(text: str, prefix: str, suffix: str) -> str:
     parts.append(text)
     if suffix:
         parts.append(suffix)
-    return "\n".join(parts) if (prefix or suffix) else text
+    return "\n\n".join(parts) if (prefix or suffix) else text
 
 
 def format_platform(text: str, platform: str, config: dict) -> list[str]:
