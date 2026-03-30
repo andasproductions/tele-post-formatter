@@ -1,0 +1,19 @@
+{
+  "twitter": {
+    "enabled": true,
+    "prefix": "",
+    "suffix": ""
+  },
+  "bluesky": {
+    "enabled": true,
+    "prefix": "",
+    "suffix": ""
+  },
+  "instagram": {
+    "enabled": true,
+    "prefix": "",
+    "suffix": ""
+  },
+  "ignored_names": [],
+  "allowed_users": []
+}

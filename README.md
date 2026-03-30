@@ -18,7 +18,7 @@ Sign up at [serper.dev](https://serper.dev) and copy your API key.
 
 ```bash
 cp .env.example .env
-# fill in TELEGRAM_BOT_TOKEN and SERPER_API_KEY in .env
+# fill in TELEGRAM_BOT_TOKEN, ADMIN_USER_ID, and SERPER_API_KEY in .env
 
 uv sync
 uv run python -m spacy download en_core_web_sm
