@@ -145,6 +145,11 @@ async def send_formatted_output(update: Update, context: ContextTypes.DEFAULT_TY
 
     platform_texts = apply_substitutions(text, substitutions)
 
+    protected_names = (
+        context.user_data.get("detected_names", []) +
+        list(context.user_data.get("manual_names", []))
+    )
+
     for platform in ["instagram", "twitter", "bluesky"]:
         if not config.get(platform, {}).get("enabled", True):
             continue
@@ -152,7 +157,7 @@ async def send_formatted_output(update: Update, context: ContextTypes.DEFAULT_TY
             chat_id=update.effective_chat.id,
             text=PLATFORM_EMOJI[platform],
         )
-        chunks = format_platform(platform_texts[platform], platform, config)
+        chunks = format_platform(platform_texts[platform], platform, config, protected_names)
         for chunk in chunks:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
