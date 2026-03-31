@@ -64,7 +64,7 @@ Editable via `/start` or `/config` in Telegram.
 | Platform  | Limit | Split format |
 |-----------|-------|--------------|
 | Twitter   | 280   | `…\n\nn/total` on non-final chunks |
-| Bluesky   | 300   | same |
+| Bluesky   | 300   | `…\n\nn/total` on non-final chunks |
 | Instagram | —     | no split |
 
 Splits happen **after** handle substitutions so character counts are accurate.
